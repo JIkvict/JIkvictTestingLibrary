@@ -159,18 +159,40 @@ class JIkvictTestExecutionListener : TestExecutionListener {
     
     /**
      * Finds a method by name in the given class or its superclasses.
+     * This implementation searches through all methods regardless of visibility.
      */
     private fun findMethodByName(clazz: Class<*>, methodName: String): Method? {
-        return try {
-            // First try to find the method directly
-            clazz.methods.find { it.name == methodName }
-        } catch (_: Exception) {
-            // If that fails, try to find it in declared methods (including private methods)
+        // Search through the class hierarchy
+        var currentClass: Class<*>? = clazz
+        while (currentClass != null) {
             try {
-                clazz.declaredMethods.find { it.name == methodName }
+                // Look for the method in declared methods (includes all visibility levels)
+                val method = currentClass.declaredMethods.find { it.name == methodName }
+                if (method != null) {
+                    // Make the method accessible regardless of its visibility
+                    if (!method.isAccessible) {
+                        method.isAccessible = true
+                    }
+                    return method
+                }
             } catch (_: Exception) {
-                null
+                // Ignore exceptions and continue searching
             }
+            
+            // Move up to the superclass
+            currentClass = currentClass.superclass
+        }
+        
+        // If not found in the hierarchy, try one last attempt with public methods
+        // This is a fallback for cases where the method might be from an interface
+        return try {
+            clazz.methods.find { it.name == methodName }?.also { 
+                if (!it.isAccessible) {
+                    it.isAccessible = true
+                }
+            }
+        } catch (_: Exception) {
+            null
         }
     }
     
