@@ -192,11 +192,6 @@ abstract class JIkvictTestTask : DefaultTask() {
             logger.lifecycle("Total tests: ${testSuiteResult.testResults.size}")
             logger.lifecycle("Passed tests: ${testSuiteResult.testResults.count { it.passed }}")
             logger.lifecycle("Failed tests: ${testSuiteResult.testResults.count { !it.passed }}")
-            logger.lifecycle(
-                "Points earned: ${testSuiteResult.totalEarnedPoints}/${testSuiteResult.totalPossiblePoints} (${
-                    String.format("%.2f", testSuiteResult.percentageEarned)
-                }%)"
-            )
             
         } finally {
             // Restore original class loader
