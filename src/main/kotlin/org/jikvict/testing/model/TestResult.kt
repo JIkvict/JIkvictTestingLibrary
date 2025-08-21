@@ -29,15 +29,14 @@ data class TestResult(
 data class TestSuiteResult(
     val testResults: List<TestResult>,
     val totalPossiblePoints: Int,
-    val totalEarnedPoints: Int
-) {
-    /**
-     * Calculates the percentage of points earned.
-     */
+    val totalEarnedPoints: Int,
     val percentageEarned: Double
-        get() = if (totalPossiblePoints > 0) {
+) {
+    companion object {
+        fun calculatePercentageEarned(totalEarnedPoints: Int, totalPossiblePoints: Int) = if (totalPossiblePoints > 0) {
             (totalEarnedPoints.toDouble() / totalPossiblePoints) * 100
         } else {
             0.0
         }
+    }
 }

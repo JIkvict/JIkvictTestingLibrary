@@ -11,6 +11,7 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
+import org.jikvict.testing.model.TestSuiteResult.Companion.calculatePercentageEarned
 
 /**
  * JUnit TestExecutionListener that processes JIkvictTest annotations and collects test results.
@@ -228,7 +229,8 @@ class JIkvictTestExecutionListener : TestExecutionListener {
         return TestSuiteResult(
             testResults = results,
             totalPossiblePoints = totalPossiblePoints,
-            totalEarnedPoints = totalEarnedPoints
+            totalEarnedPoints = totalEarnedPoints,
+            percentageEarned = calculatePercentageEarned(totalEarnedPoints, totalPossiblePoints)
         )
     }
     
