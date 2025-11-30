@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "2.1.21"
     `java-gradle-plugin`
     `maven-publish`
+    `kotlin-dsl`
     id("java-library")
 }
 
