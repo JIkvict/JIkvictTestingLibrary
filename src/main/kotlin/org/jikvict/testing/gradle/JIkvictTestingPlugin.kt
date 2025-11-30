@@ -51,6 +51,7 @@ class JIkvictTestingPlugin : Plugin<Project> {
             add("implementation", "com.h2database:h2:2.2.224")
 
             add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.10.1")
+            add("testImplementation", "org.junit.jupiter:junit-jupiter-params:5.10.1")
             add("testImplementation", "org.junit.platform:junit-platform-launcher:1.10.1")
             add("testImplementation", "org.assertj:assertj-core:3.27.6")
             add("testImplementation", "org.mockito:mockito-core:5.20.0")
