@@ -53,7 +53,7 @@ class JIkvictTestingPlugin : Plugin<Project> {
             add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.10.1")
             add("testImplementation", "org.junit.platform:junit-platform-launcher:1.10.1")
             add("testImplementation", "org.assertj:assertj-core:3.27.6")
-            add("testImplementation", "org.mockito:mockito-core:5.15.0")
+            add("testImplementation", "org.mockito:mockito-core:5.20.0")
             add("testImplementation", "org.mockito.kotlin:mockito-kotlin:5.3.1")
             add("testImplementation", "io.mockk:mockk:1.14.6")
         }
