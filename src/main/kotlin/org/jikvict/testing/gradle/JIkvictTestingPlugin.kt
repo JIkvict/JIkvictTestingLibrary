@@ -11,10 +11,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.DependencyHandlerScope
-import org.gradle.kotlin.dsl.dependencies
-import org.jikvict.testing.junit.JIkvictTestExecutionListener
-import org.jikvict.testing.model.TestSuiteResult
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectClasspathRoots
 import org.junit.platform.engine.discovery.DiscoverySelectors.selectPackage
@@ -22,6 +18,8 @@ import org.junit.platform.launcher.LauncherDiscoveryRequest
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener
+import org.jikvict.testing.junit.JIkvictTestExecutionListener
+import org.jikvict.testing.model.TestSuiteResult
 import java.io.File
 import java.net.URL
 import java.net.URLClassLoader
@@ -36,72 +34,51 @@ class JIkvictTestingPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         // Register the JIkvictTest task
-        with(project) {
-            tasks.register("runJIkvictTests", JIkvictTestTask::class.java) {
-                description = "Runs tests with JIkvict testing framework and calculates points"
-                group = "verification"
+        project.tasks.register("runJIkvictTests", JIkvictTestTask::class.java) {
+            description = "Runs tests with JIkvict testing framework and calculates points"
+            group = "verification"
 
-                // Set default values
-                testPackage.set("") // Default to empty, which means all packages
-                outputFile.set(project.layout.buildDirectory.file("jikvict-results.json"))
-
-                // Ensure test classes are compiled before running
-                dependsOn("testClasses")
-            }
-
-            dependencies {
-                addDependencies()
-            }
+            testPackage.set("")
+            outputFile.set(project.layout.buildDirectory.file("jikvict-results.json"))
+            dependsOn("testClasses")
         }
 
+        project.dependencies.apply {
+            add("implementation", "org.junit.platform:junit-platform-launcher:1.10.1")
+            add("implementation", "org.junit.jupiter:junit-jupiter-engine:5.10.1")
+            add("implementation", "org.junit.jupiter:junit-jupiter-api:5.10.1")
+            add("implementation", "org.slf4j:slf4j-api:2.0.13")
+            add("implementation", "com.h2database:h2:2.2.224")
+
+            add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.10.1")
+            add("testImplementation", "org.junit.platform:junit-platform-launcher:1.10.1")
+            add("testImplementation", "org.assertj:assertj-core:3.27.6")
+            add("testImplementation", "org.mockito:mockito-core:5.15.0")
+            add("testImplementation", "org.mockito.kotlin:mockito-kotlin:5.3.1")
+            add("testImplementation", "io.mockk:mockk:1.14.6")
+        }
     }
-}
-
-const val IMPLEMENTATION = "implementation"
-const val TEST_IMPLEMENTATION = "testImplementation"
-
-private fun DependencyHandlerScope.addDependencies() {
-    add(IMPLEMENTATION, "org.junit.platform:junit-platform-launcher:1.10.1")
-    add(IMPLEMENTATION, "org.junit.jupiter:junit-jupiter-engine:5.10.1")
-    add(IMPLEMENTATION, "org.junit.jupiter:junit-jupiter-api:5.10.1")
-    add(IMPLEMENTATION, "org.slf4j:slf4j-api:2.0.13")
-    add(IMPLEMENTATION, "com.h2database:h2:2.2.224")
-
-    add(TEST_IMPLEMENTATION, "org.junit.jupiter:junit-jupiter-api:5.10.1")
-    add(TEST_IMPLEMENTATION, "org.junit.platform:junit-platform-launcher:1.10.1")
-    add(TEST_IMPLEMENTATION, "org.assertj:assertj-core:3.27.6")
-    add(TEST_IMPLEMENTATION, "org.mockito:mockito-core:5.15.0")
-    add(TEST_IMPLEMENTATION, "org.mockito.kotlin:mockito-kotlin:5.3.1")
-    add(TEST_IMPLEMENTATION, "io.mockk:mockk:1.14.6")
 }
 
 /**
  * Custom Gradle task for running tests with JIkvict testing framework.
- * This task is configured to always run and not be skipped by Gradle's up-to-date checks.
  */
 abstract class JIkvictTestTask : DefaultTask() {
 
     init {
-        // Disable Gradle's up-to-date check to ensure this task always runs
-        // This prevents the task from being skipped even if inputs/outputs haven't changed
         outputs.upToDateWhen { false }
     }
 
-    // Task inputs
     @Input
     @Optional
     val testPackage: Property<String?> = project.objects.property(String::class.java)
 
-    // Task outputs
     @OutputFile
     val outputFile: RegularFileProperty = project.objects.fileProperty()
 
     @TaskAction
     fun runTests() {
-        // Ensure build directory exists
         val buildDir = project.layout.buildDirectory.asFile.get()
-
-        // Check if test classes directory exists
         val testClassesDir = File(buildDir, "classes/kotlin/test")
         val javaTestClassesDir = File(buildDir, "classes/java/test")
 
@@ -114,10 +91,8 @@ abstract class JIkvictTestTask : DefaultTask() {
             return
         }
 
-        // Set up classpath for test execution
         val testClasspath = mutableListOf<URL>()
 
-        // Add test classes directories to classpath
         if (javaTestClassesDir.exists()) {
             testClasspath.add(javaTestClassesDir.toURI().toURL())
         }
@@ -125,7 +100,6 @@ abstract class JIkvictTestTask : DefaultTask() {
             testClasspath.add(testClassesDir.toURI().toURL())
         }
 
-        // Add main classes to classpath
         val mainClassesDir = File(buildDir, "classes/java/main")
         val kotlinMainClassesDir = File(buildDir, "classes/kotlin/main")
         if (mainClassesDir.exists()) {
@@ -135,7 +109,6 @@ abstract class JIkvictTestTask : DefaultTask() {
             testClasspath.add(kotlinMainClassesDir.toURI().toURL())
         }
 
-        // Get project dependencies
         val testRuntimeClasspath = project.configurations.getByName("testRuntimeClasspath")
         testRuntimeClasspath.files.forEach { file ->
             if (file.exists()) {
@@ -143,33 +116,24 @@ abstract class JIkvictTestTask : DefaultTask() {
             }
         }
 
-        // Create custom class loader with all necessary classes
         val classLoader = URLClassLoader(testClasspath.toTypedArray(), Thread.currentThread().contextClassLoader)
         val originalClassLoader = Thread.currentThread().contextClassLoader
 
         try {
-            // Set the custom class loader as context class loader
             Thread.currentThread().contextClassLoader = classLoader
 
-            // Create JUnit launcher
             val launcher = LauncherFactory.create()
-
-            // Create listeners
             val summaryListener = SummaryGeneratingListener()
             val jikvictListener = JIkvictTestExecutionListener()
 
-            // Register listeners
             launcher.registerTestExecutionListeners(summaryListener, jikvictListener)
 
-            // Create discovery request
             val requestBuilder = LauncherDiscoveryRequestBuilder.request()
 
-            // If a specific package is provided, use it; otherwise, discover all tests
             if (testPackage.isPresent && testPackage.get()?.isNotEmpty() == true) {
                 logger.lifecycle("Scanning package: ${testPackage.get()}")
                 requestBuilder.selectors(selectPackage(testPackage.get()))
             } else {
-                // When no package is specified, scan the classpath for all test classes
                 val classpathRoots = mutableSetOf<Path>()
 
                 if (javaTestClassesDir.exists()) {
@@ -184,9 +148,7 @@ abstract class JIkvictTestTask : DefaultTask() {
                 if (classpathRoots.isNotEmpty()) {
                     requestBuilder.selectors(selectClasspathRoots(classpathRoots))
 
-                    // Also try to discover by class selector if available
                     try {
-                        // Try to find test classes explicitly
                         val testClasses = findTestClasses(javaTestClassesDir)
                         if (testClasses.isNotEmpty()) {
                             logger.lifecycle("Found test classes: ${testClasses.joinToString(", ")}")
@@ -201,29 +163,23 @@ abstract class JIkvictTestTask : DefaultTask() {
                 }
             }
 
-            // Add engines
             requestBuilder.configurationParameter("junit.jupiter.testinstance.lifecycle.default", "per_class")
 
             val request: LauncherDiscoveryRequest = requestBuilder.build()
 
-            // Execute tests
             logger.lifecycle("Executing test discovery and execution...")
             launcher.execute(request)
 
-            // Get test results
             val testSuiteResult = jikvictListener.getTestSuiteResult()
 
-            // Write results to JSON file
             writeResultsToJson(testSuiteResult, outputFile.get().asFile)
 
-            // Print summary
             logger.lifecycle("JIkvict Test Results:")
             logger.lifecycle("Total tests: ${testSuiteResult.testResults.size}")
             logger.lifecycle("Passed tests: ${testSuiteResult.testResults.count { it.passed }}")
             logger.lifecycle("Failed tests: ${testSuiteResult.testResults.count { !it.passed }}")
 
         } finally {
-            // Restore original class loader
             Thread.currentThread().contextClassLoader = originalClassLoader
         }
     }
@@ -238,7 +194,6 @@ abstract class JIkvictTestTask : DefaultTask() {
                 val relativePath = testDir.toPath().relativize(file.toPath()).toString()
                 val className = relativePath.replace("/", ".").replace("\\", ".").removeSuffix(".class")
 
-                // Load the class and check if it has test methods
                 try {
                     val clazz = Thread.currentThread().contextClassLoader.loadClass(className)
                     val hasTestMethods = clazz.methods.any { method ->
@@ -249,7 +204,6 @@ abstract class JIkvictTestTask : DefaultTask() {
                         logger.lifecycle("Found test class: $className")
                     }
                 } catch (e: Exception) {
-                    // Ignore classes that can't be loaded
                     logger.debug("Could not load class $className: ${e.message}")
                 }
             }
